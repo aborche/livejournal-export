@@ -81,7 +81,6 @@ def ReformatBody(body):
     sbody = TagsChanger()
     sbody.feed(body.replace(u'&nbsp;', ' '))
     print sbody.get_data()
-    print "="*30,body
 
 def ParsePost(post):
     CurrentPost = PostTemplate()
