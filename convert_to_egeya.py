@@ -14,6 +14,9 @@ class PostTemplate():
         self.Id = 0
         self.Stamp = datetime.datetime.today()
         self.LastModified = datetime.datetime.today()
+        self.Subject = ''
+        self.Body = ''
+        self.isVisible = False
 
 class TagsChanger(HTMLParser):
     def __init__(self):
@@ -87,6 +90,7 @@ def ReformatBody(body):
     sbody = TagsChanger()
     sbody.feed(body.replace(u'&nbsp;', ' '))
     print sbody.get_data()
+    return sbody.get_data()
 
 def ParsePost(post):
     CurrentPost = PostTemplate()
@@ -99,8 +103,13 @@ def ParsePost(post):
     if 'eventtime' in post:
         print 'LastModified %s'%datetime.datetime.strptime(post['eventtime'],'%Y-%m-%d %H:%M:%S')
         CurrentPost.LastModified = datetime.datetime.strptime(post['eventtime'],'%Y-%m-%d %H:%M:%S')
+    if 'subject' in post:
+        print 'Subject %s'%post['subject']
+        CurrentPost.Subject = post['subject']
+#    if 'security' in post:
+#        CurrentPost.isVisible = ReformatBody(post['subject'])
     if 'body' in post:
-        ReformatBody(post['body'])
+        CurrentPost.Body = ReformatBody(post['body'])
 #    for item in post:
 #        print item.encode(),'---->',post[item]
     
