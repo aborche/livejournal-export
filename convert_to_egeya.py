@@ -41,7 +41,7 @@ class TagsChanger(HTMLParser):
         if tag == 'S':
             self.fed.append('--')
         if tag == 'A':
-            print 'A ATTRS %s'%attrs
+            #print 'A ATTRS %s'%attrs
             for attrpair in attrs:
                 (attr,value) = attrpair
                 if attr == 'href':
@@ -55,6 +55,12 @@ class TagsChanger(HTMLParser):
             self.openedtable = True
         if tag == 'TD':
             self.fed.append('|')
+        if tag == 'IMG':
+            for attrpair in attrs:
+                (attr,value) = attrpair
+                if attr == 'src':
+                    self.fed.append('<img src=\"%s\">'%value)
+            #print 'IMG %s'%attrs
 
     def handle_endtag(self, tag):
         """ Handle end tag """
