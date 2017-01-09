@@ -49,7 +49,7 @@ class TagsChanger(HTMLParser):
                 (attr,value) = attrpair
                 if attr == 'href':
                     self.fed.append('[[%s '%value)
-        if tag == 'CODE':
+        if tag == 'CODE' or tag == 'PRE':
             self.fed.append('<code>')
         if tag == 'BR':
             self.fed.append('\n')
@@ -76,7 +76,7 @@ class TagsChanger(HTMLParser):
             self.fed.append('--')
         if tag == 'A':
             self.fed.append(']]')
-        if tag == 'CODE':
+        if tag == 'CODE' or tag == 'PRE':
             self.fed.append('</code>')
 #        if tag == 'BR':
 #            self.fed.append('\n')
@@ -89,7 +89,7 @@ class TagsChanger(HTMLParser):
 def ReformatBody(body):
     sbody = TagsChanger()
     sbody.feed(body.replace(u'&nbsp;', ' '))
-    print sbody.get_data()
+    print "="*50,"\n",sbody.get_data()
     return sbody.get_data()
 
 def ParsePost(post):
