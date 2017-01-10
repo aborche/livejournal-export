@@ -6,6 +6,7 @@ import requests
 import codecs
 import pprint
 import sys
+import re
 from HTMLParser import HTMLParser
 import datetime
 
@@ -14,10 +15,13 @@ class PostTemplate():
         self.Id = 0
         self.Stamp = datetime.datetime.today()
         self.LastModified = datetime.datetime.today()
-        self.Subject = ''
-        self.SubjectTransliterated = ''
-        self.Body = ''
+        self.Title = ''
+        self.OriginalAlias = ''
+        self.Text = ''
         self.isVisible = False
+        self.isCommentable = False
+        self.isPublished = True
+        self.isFavourite = False
 
     def transliterate(self,string):
         ''' cut from https://gist.github.com/aruseni/1685068 '''
@@ -47,13 +51,19 @@ class PostTemplate():
                 capital_and_lower_case_letter_pairs[u"%s%s" % (capital_letter, lowercase_letter)] = u"%s%s" % (capital_letter_translit, lowercase_letter_translit)
 
         for dictionary in (capital_and_lower_case_letter_pairs, capital_letters, lower_case_letters):
-
             for cyrillic_string, latin_string in dictionary.iteritems():
                 string = string.replace(cyrillic_string, latin_string)
 
         for cyrillic_string, latin_string in capital_letters_transliterated_to_multiple_letters.iteritems():
             string = string.replace(cyrillic_string, latin_string.upper())
+        
+        return string
 
+    def cleanup(self,string):
+        ''' clean up transliterated string '''
+        string = re.sub(r"[^A-Za-z0-9-]", "-", string)
+        string = re.sub(r'\-{2,}', '-', string)
+        string = re.sub(r'\-$', '', string)
         return string
 
 class TagsChanger(HTMLParser):
@@ -61,75 +71,80 @@ class TagsChanger(HTMLParser):
         self.reset()
         self.allowappend = False
         self.openedtable = False
-        self.fed = []
+        self.outputarray = []
 
-    def handle_data(self, d):
-        if self.openedtable:
-            self.fed.append(d)
-        else:
-            self.fed.append(d)
+    def handle_data(self, data):
+            self.outputarray.append(data)
 
     def get_data(self):
-        return ''.join(self.fed)
+        ''' Return reparsed string '''
+        return ''.join(self.outputarray)
 
     def handle_starttag(self, tag, attrs):
-        """ Handle start tag """
+        ''' Handle start tag '''
         tag = tag.upper()
         if tag == 'B':
-            self.fed.append('**')
+            self.outputarray.append('**')
         if tag == 'I':
-            self.fed.append('//')
+            self.outputarray.append('//')
         if tag == 'S':
-            self.fed.append('--')
+            self.outputarray.append('--')
         if tag == 'A':
             #print 'A ATTRS %s'%attrs
             for attrpair in attrs:
                 (attr,value) = attrpair
                 if attr == 'href':
-                    self.fed.append('[[%s '%value)
+                    self.outputarray.append('[[%s '%value)
         if tag == 'CODE' or tag == 'PRE':
-            self.fed.append('<code>')
+            self.outputarray.append('<code>')
         if tag == 'BR':
-            self.fed.append('\n')
+            self.outputarray.append('\n')
         if tag == 'TABLE':
-            self.fed.append('-----')
+            self.outputarray.append('-----')
             self.openedtable = True
         if tag == 'TD':
-            self.fed.append('|')
+            self.outputarray.append('|')
         if tag == 'IMG':
             for attrpair in attrs:
                 (attr,value) = attrpair
                 if attr == 'src':
-                    self.fed.append('<img src=\"%s\">'%value)
+                    self.outputarray.append('<img src=\"%s\">'%value)
             #print 'IMG %s'%attrs
 
     def handle_endtag(self, tag):
         """ Handle end tag """
         tag = tag.upper()
         if tag == 'B':
-            self.fed.append('**')
+            self.outputarray.append('**')
         if tag == 'I':
-            self.fed.append('//')
+            self.outputarray.append('//')
         if tag == 'S':
-            self.fed.append('--')
+            self.outputarray.append('--')
         if tag == 'A':
-            self.fed.append(']]')
+            self.outputarray.append(']]')
         if tag == 'CODE' or tag == 'PRE':
-            self.fed.append('</code>')
-#        if tag == 'BR':
-#            self.fed.append('\n')
+            self.outputarray.append('</code>')
         if tag == 'TABLE':
-            self.fed.append('-----\n')
+            self.outputarray.append('-----\n')
             self.openedtable = False
         if tag == 'TR':
-            self.fed.append('|')
+            self.outputarray.append('|')
 
-def ReformatBody(body):
+def ReformatPostBody(body):
+    '''
+    Reformat post body by replacing html tags to Egeya specific markup
+    '''
     sbody = TagsChanger()
     sbody.feed(body.replace(u'&nbsp;', ' '))
-    #print "="*50,"\n",sbody.get_data()
-    #print "="*50,"\n",body
     return sbody.get_data()
+
+def PostUniqUrl(subject):
+    PostCounter = 1
+    while subject in PostSubjects and subject != '' and PostCounter < 100000:
+        subject = "%s%s"%(subject[:-len(str(PostCounter))],PostCounter)
+        PostCounter += 1
+    PostSubjects.append(subject)
+    return subject
 
 def ParsePost(post):
     CurrentPost = PostTemplate()
@@ -141,25 +156,26 @@ def ParsePost(post):
     if 'eventtime' in post:
         CurrentPost.LastModified = datetime.datetime.strptime(post['eventtime'],'%Y-%m-%d %H:%M:%S')
     if 'subject' in post:
-        CurrentPost.Subject = post['subject']
-        CurrentPost.SubjectTransliterated = CurrentPost.transliterate(post['subject']).replace(' ','-')[:64]
+        CurrentPost.Title = post['subject']
+        CurrentPost.OriginalAlias = PostUniqUrl(CurrentPost.cleanup(CurrentPost.transliterate(post['subject']))[:64])
     if 'security' in post:
         CurrentPost.isVisible = 1 if post['security'] == 'public' else 0
     if 'body' in post:
-        CurrentPost.Body = ReformatBody(post['body'])
+        CurrentPost.Text = ReformatPostBody(post['body'])
 #    for item in post:
 #        print item.encode(),'---->',post[item]
     print 'Date: %s'%CurrentPost.Stamp
     print 'LastModified: %s'%CurrentPost.LastModified
-    print 'Subject: %s'%CurrentPost.Subject
-    print 'Subject_Trans: %s'%CurrentPost.SubjectTransliterated
-    print 'Body',CurrentPost.Body
+    print 'Subject: %s'%CurrentPost.Title
+    print 'Subject_Trans: %s'%CurrentPost.OriginalAlias
+    print 'Body',CurrentPost.Text
     print "="*50
-    
 
 def main():
     if len(sys.argv) < 1:
         sys.exit(1)
+    global PostSubjects
+    PostSubjects = []
     with codecs.open(sys.argv[1], encoding='cp1251') as fh:
         JSONedPosts = json.loads(fh.read())
 	if 'post' in JSONedPosts:
