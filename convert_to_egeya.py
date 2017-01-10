@@ -14,6 +14,7 @@ import datetime
 import logging
 import os
 from PIL import Image
+#from html.parser import HTMLParser
 from HTMLParser import HTMLParser
 
 
@@ -182,7 +183,7 @@ def PostUniqUrl(subject):
 def ParsePost(post):
     CurrentPost = PostTemplate()
     if 'id' in post:
-        print 'PostID: %s'%post['id']
+        print('PostID: %s'%post['id'])
         CurrentPost.Id = post['id']
     if 'date' in post:
         CurrentPost.Stamp = datetime.datetime.strptime(post['date'],'%Y-%m-%d %H:%M:%S')
@@ -197,23 +198,23 @@ def ParsePost(post):
         CurrentPost.Text = ReformatPostBody(post['body'])
 #    for item in post:
 #        print item.encode(),'---->',post[item]
-    print 'Date: %s'%CurrentPost.Stamp
-    print 'LastModified: %s'%CurrentPost.LastModified
-    print 'Subject: %s'%CurrentPost.Title
-    print 'Subject_Trans: %s'%CurrentPost.OriginalAlias
-    print 'Body',CurrentPost.Text
-    print "="*50
+    print('Date: %s'%CurrentPost.Stamp)
+    print('LastModified: %s'%CurrentPost.LastModified)
+    print('Subject: %s'%CurrentPost.Title)
+    print('Subject_Trans: %s'%CurrentPost.OriginalAlias)
+    print('Body:\n%s\n%s'%("="*50,CurrentPost.Text))
+    print("="*50)
 
 def main():
     if len(sys.argv) < 1:
         sys.exit(1)
     global PostSubjects
     PostSubjects = []
-    with codecs.open(sys.argv[1], encoding='cp1251') as fh:
+    with codecs.open(sys.argv[1], encoding='utf8') as fh:
         JSONedPosts = json.loads(fh.read())
-	if 'post' in JSONedPosts:
-	    logger.info('Processing post %s'%JSONedPosts['post']['id'])
-	    ParsePost(JSONedPosts['post'])
+        if 'post' in JSONedPosts:
+            logger.info('Processing post %s'%JSONedPosts['post']['id'])
+            ParsePost(JSONedPosts['post'])
         else:		
             for post in JSONedPosts:
                 logger.info('Processing post %s'%post['id'])
@@ -225,6 +226,6 @@ if __name__ == '__main__':
     os.environ['NO_PROXY'] = 'pics.livejournal.com'
     if not os.path.exists('pictures/thumbs'):
         logger.info('Creating directory')
-        os.makedirs('pictures/thumbs',0755)
+        os.makedirs('pictures/thumbs',0o755)
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
     main()
