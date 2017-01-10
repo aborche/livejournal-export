@@ -2,13 +2,12 @@
 
 # Export your Livejournal blog data to [egeya](http://blogengine.ru)
 
-After exporting data from livejournal blog (see below)
-Run **python convert_to_egeya.py posts-json\all.json > all.txt**
+After exporting data from livejournal blog (see below).
+Run **python convert_to_egeya.py posts-json\all.json > all.txt**.
 Script makes pictures directory and download to it image files from your
 blog. When it finished, copy folder 'pictures' to your web server blog
 directory.
 In file 'all.txt' you can find all your posts reformatted for Egeya.
-
 
 # Export your LiveJournal blog data
 
