@@ -1,7 +1,7 @@
 config = { 
     'user': 'blogimport', 
     'password': 'bl0g1234', 
-    'host': 'localhost', 
+    'host': '10.6.204.173', 
     'port': '3306',
     'database': 'blog',
 #    'client_flags': [ClientFlag.SSL], 
