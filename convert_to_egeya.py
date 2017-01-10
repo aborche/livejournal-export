@@ -1,14 +1,21 @@
 #!/bin/env python2
 # -*- coding: utf8 -*-
+#
+# @ aborche 2017
+#
 
 import json
 import requests
+import shutil
 import codecs
-import pprint
 import sys
 import re
-from HTMLParser import HTMLParser
 import datetime
+import logging
+import os
+from PIL import Image
+from HTMLParser import HTMLParser
+
 
 class PostTemplate():
     def __init__(self):
@@ -108,7 +115,7 @@ class TagsChanger(HTMLParser):
             for attrpair in attrs:
                 (attr,value) = attrpair
                 if attr == 'src':
-                    self.outputarray.append('<img src=\"%s\">'%value)
+                    self.outputarray.append(self.imageloader(value))
             #print 'IMG %s'%attrs
 
     def handle_endtag(self, tag):
@@ -129,6 +136,32 @@ class TagsChanger(HTMLParser):
             self.openedtable = False
         if tag == 'TR':
             self.outputarray.append('|')
+
+    def imageloader(self,url):
+        r = requests.get(url, stream=True)
+        filename = 'error.jpg'
+        path = 'pictures/' + filename
+        if r.status_code == 200:
+            if r.url.find('.jpg')>0 or r.url.find('.png')>0 or r.url.find('.gif')>0:
+                filename = url.rsplit('/',1)[1].rsplit('.',1)[0] + '.' + r.url.rsplit('.',1)[1]
+            else:
+                filename = url.rsplit('/',1)[1]
+            path = 'pictures/' + filename
+            with open(path, 'wb') as f:
+                r.raw.decode_content = True
+                shutil.copyfileobj(r.raw, f)
+        try:
+            size = 160, 160
+            im = Image.open(path)
+            logger.info('%s %s %dx%d %s'%(path, im.format, im.size[0], im.size[1], im.mode))
+            im.thumbnail(size, Image.ANTIALIAS)
+            path = 'pictures/thumbs/' + filename.rsplit('.',1)[0] + '.thumb@2x.' + filename.rsplit('.',1)[1]
+            logger.info(path)
+            im.save(path, im.format)
+        except IOError:
+            logger.error('Open file %s failed'%path)
+            pass
+        return filename
 
 def ReformatPostBody(body):
     '''
@@ -179,11 +212,19 @@ def main():
     with codecs.open(sys.argv[1], encoding='cp1251') as fh:
         JSONedPosts = json.loads(fh.read())
 	if 'post' in JSONedPosts:
+	    logger.info('Processing post %s'%JSONedPosts['post']['id'])
 	    ParsePost(JSONedPosts['post'])
         else:		
             for post in JSONedPosts:
+                logger.info('Processing post %s'%post['id'])
                 ParsePost(post)
     
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger('ljconvert')
+    os.environ['NO_PROXY'] = 'pics.livejournal.com'
+    if not os.path.exists('pictures/thumbs'):
+        logger.info('Creating directory')
+        os.makedirs('pictures/thumbs',0755)
     sys.stdout = codecs.getwriter('utf8')(sys.stdout)
     main()
